@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jogo Ping-Pong</title>
+  <style>
+    * {
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas></canvas>
+  <script>
+    const canvasEl = document.querySelector("canvas"),
+      canvasCtx = canvasEl.getContext("2d"),
+      gapX = 10
+
+ 
+      const mouse = { x: 0, y: 0}
+
+    // campo 
+    const field = {  // em vez de espalhar códigos, vamos concentrar propriedades e toa a lógica dentro de um objeto, fazendo assim, a nossa programação mais entendível porque conseguimos visualizar o que aquele objeto faz em especial. 
+      w: window.innerWidth,
+      h: window.innerHeight,
+      draw: function () {  // função desenha o campo. 
+        canvasCtx.fillStyle = "#286047"
+        canvasCtx.fillRect(0, 0, this.w, this.h)  // O this significa que está fazendo referência a largura e altura do objeto field.
+      },
+    }
+
+
+    // linha 
+    const line = {
+      w: 15,
+      h: field.h,  // É a mesma altura do campo. 
+      draw: function() {   // função desenha a linha. 
+        canvasCtx.fillStyle = "#ffffff"
+        canvasCtx.fillRect (field.w / 2 - this.w / 2, 0, this.w, this.h)  // o h já foi referenciado, então posso usar this.h agora. 
+        },
+      }
+
+         // desenha a raquete esquerda
+         const leftPaddle = {
+          x: gapX, 
+          y: 0,
+          w: line.w,  // se tivesse uma largura diferente, teria que colocar outro número, mas nesse caso a largura é a mesma. 
+          h: 200,
+          _move: function() {  // vai movimentar o y. 
+            this.y = mouse.y - this.h/2  // dividi a altura por 2 para o mouse ficar no meio da raquete. 
+          },
+          draw: function () {   // método draw, que recebe uma function.  // função desenha a raquete. 
+            canvasCtx.fillStyle = "#ffffff"
+            canvasCtx.fillRect(this.x, this.y, this.w, this.h)
+
+            this._move()
+          },
+         }
+
+         // desenha a raquete direita
+         const rightPaddle = {
+          x: field.w - line.w - gapX,  
+          y: 100,
+          w: line.w,  // se tivesse uma largura diferente, teria que colocar outro número, mas nesse caso a largura é a mesma. 
+          h: 200,
+          speed: 5,
+          _move: function () {
+               // vai controlar o right. O computador nunca vau perder pq ele acompanha o y da bola. 
+           // Isso é um problema pq vc deixa os jogadores desmotivados. 
+           // Precisamos deixar o jogador humano ganhar no início e aos poucos ir evoluindo de fase. Precisamos fazer isso:
+          if (this.y + this.h / 2 < ball.y + ball.r) {
+            this.y += this.speed
+          } else {
+            this.y -= this.speed
+          }
+          },
+          speedUp: function () {
+            this.speed += 2 // MUITO IMPORTANTE a bola incrementa de 3 e a raquete de 2 para sempre criar uma pequena desvantagem para o computador. 
+          },
+          draw: function () {   // método draw, que recebe uma function.  // função desenha a raquete. 
+            canvasCtx.fillStyle = "#ffffff"
+            canvasCtx.fillRect(this.x, this.y, this.w, this.h)
+
+            this._move()
+          },
+         }  // a raquete direita é o computador e é animada em função da bolinha. 
+            // OBS: Esse não é o melhor método porque dessa forma fica impossível de vencer o computador. 
+
+        // desenha o placar
+        const score =  {  // como o canvas trabalha com sopreposição, se eu quero a bolinha em cima do placar, o placar deve ser declarado antes da bolinha. Não esquecer de chamar o score antes da ball também na function draw.
+          human: 0,
+          computer: 0, 
+          increaseHuman: function() {
+            this.human++
+          },
+          increaseComputer: function() {
+            this.computer++
+          },
+          draw: function () {
+            canvasCtx.font = "bold 72px Arial"
+            canvasCtx.textAlign = "center"
+            canvasCtx.textBaseline = "top"
+            canvasCtx.fillStyle = "#01341D"
+            canvasCtx.fillText(this.human, field.w / 4, 50)
+            canvasCtx.fillText(this.computer, field.w / 4 + field.w / 2, 50)
+          },
+        }   
+      
+      // desenha a bolinha
+         const ball = {
+          x: field.w / 2,  // Aqui que estava o erro do código do professor. A bolinha não pode começar do x (início). Tem que partir do meio. 
+          y: field.h / 2,
+          r: 20,
+          speed: 5,   // essa propriedade vai dar um pouco mais de velocidade para a bolinha. 
+          directionX: 1,
+          directionY: 1,  //diz pra gente qual é o sentido que a bolinha está caminhando. 
+          // Lembrando que: 1 : a bolinha caminha para baixo e -1, a bolinha caminha para cima. 
+          _calcPosition: function () { 
+            // verifica se o jogador 1 fez um ponto (x > Largura do campo):
+            if (this.x > field.w - this.r - rightPaddle.w - gapX) {
+              // se está sendo feito o ponto, verifico se a raquete direita está na posição y da bola:
+              if (
+              this.y + this.r > rightPaddle.y && 
+              this.y - this.r < rightPaddle.y + rightPaddle.h 
+              ) {
+                // rebate a bola, invertendo o sinal de x. 
+                this._reverseX()
+            } else {
+              // pontuar o jogador 1 
+              score.increaseHuman()
+              this._pointUp()
+            }
+          }
+
+          // verifica se o jogador 2 fez um ponto (x < 0)
+          if (this.x < this.r + leftPaddle.w + gapX) {  // cheguei no fundo do lado esquerdo (menor que zero)
+          // verifica se a raquete esquerda está na posição y da bola
+            if (
+              this.y + this.r > leftPaddle.y &&
+            this.y - this.r < leftPaddle.y + leftPaddle.h
+             ) {
+               // rebate a bola, invertendo o sinal de x. 
+               this._reverseX()
+            } else {
+              // se isso não acontecer, pontuar o jogador 2
+              score.increaseComputer()
+              this._pointUp() 
+            } 
+          }
+
+            // var verifica as Laterais superior e inferior do campo. 
+          if (
+            (this.y - this.r < 0 && this.directionY < 0 ) || 
+            (this.y > field.h - this.r && this.directionY > 0)
+            ) {  // se a posição do y for maior que a altura do campo, devo inverter a minha somatória. 
+              // rebate a bola, invertendo o sinal do eixo y:
+              this._reverseY()
+          }   // se a posição da bolinha estiver próxima da altura do campo, ela vai virar. 
+          },
+          _reverseX: function () {
+             // 1 * -1 = -1 
+            // -1 * -1 = 1 
+            this.directionX *= -1           // vai transformar o 1 para -1, para que ele possa em vez de somar, subtrair. 
+          },
+          _reverseY: function () {
+            // 1 * -1 = -1 
+            // -1 * -1 = 1 
+            this.directionY *= -1           // vai transformar o 1 para -1, para que ele possa em vez de somar, subtrair. 
+          },
+          _speedUp: function () {
+            // vai incrementar nossa speed de 3 em 3:
+            this.speed += 3 // vc pode calibrar essa velocidade sempre que desejar. 
+          },
+          _pointUp: function () {
+            this._speedUp() // essa função vai aumentar a velocidade da bolinha. 
+            rightPaddle.speedUp()
+            // Feito ponto, vamos colocar a bolinha no meio do campo:
+            this.x = field.w / 2
+            this.y = field.h /2
+
+          },
+          _move: function () {    // Tudo o que o move vai fazer é modificar a propriedade x e y dessa bolinha. 
+            this.x += this.directionX * this.speed
+            this.y += this.directionY * this.speed
+          },   
+          draw: function () {  // função desenha a bolinha
+            canvasCtx.fillStyle = "#ffffff"
+            canvasCtx.beginPath()
+            canvasCtx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false )
+            canvasCtx.fill()  
+
+            this._calcPosition()
+            this._move()  // Agora o draw, além de desenhar tudo, agora vai ser responsável por chamar o método de mover. 
+          },
+         }
+
+
+    function setup() {
+      canvasEl.width = canvasCtx.width = field.w
+      canvasEl.height = canvasCtx.height = field.h
+    }
+
+
+    function draw() {  // aí é só chamar o método. Esses são os princípios da POO. // Temos que sempre chamar o método na função draw.
+     
+      field.draw() 
+      line.draw() 
+      leftPaddle.draw()
+      rightPaddle.draw()
+      score.draw()  // não esquecer de chamar o score antes do ball aqui também, para a bolinha ficar sobre o placar. 
+      ball.draw()
+    }
+
+    window.animateFrame = (function () {  // A cada vez que o setInterval vai executando, ele vai atropelando os frames, não ficando de uma forma suave. Para isso temos a API window.animateFrame, que é uma API nativa do navegador, que cria animações suaves.
+      return (
+        window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function (callback) {
+          return window.setTimeout(callback, 1000 / 60)
+        }
+      )
+    }
+    ) ()
+
+     function main () {
+      animateFrame(main)
+      draw()
+     }
+
+     setup()
+     main()  // Uma vez que chama a main, ela anima o frame e chama o método draw. 
+
+      canvasEl.addEventListener ("mousemove", function(e) {     // o evento que escuta o mouse. 
+        mouse.x = e.pageX
+        mouse.y = e.pageY
+        console.log(mouse)
+      })
+      
+  
+
+  </script>
+</body>
+
+</html>
